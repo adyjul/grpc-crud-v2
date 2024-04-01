@@ -443,7 +443,7 @@ func (s *server) CreateBulkRef(ctx context.Context, req *crud.CreateBulkRefReque
 	startTime := time.Now()
 	cpuStart := getCurrentCPUUsage()
 	query := "INSERT INTO `ref_barang` (`id_ref_barang`, `id_barang`, `stok`, `expired`, `no_batch`, `created_date`) VALUES (NULL,?,?,?,?, current_timestamp());"
-
+	var totalMemorySize int
 	tx, err := s.db.Begin()
 	if err != nil {
 		return nil, err
@@ -464,7 +464,9 @@ func (s *server) CreateBulkRef(ctx context.Context, req *crud.CreateBulkRefReque
 	defer stmt.Close()
 
 	for _, data := range req.Data {
-
+		responseMemorySize := calculateMemorySize(data)
+		totalMemorySize += responseMemorySize
+		
 		_, err := stmt.Exec(data.IdBarang, data.Stok, data.ExpDate, data.NoBatch)
 		if err != nil {
 			return nil, err
@@ -476,8 +478,11 @@ func (s *server) CreateBulkRef(ctx context.Context, req *crud.CreateBulkRefReque
 	duration := time.Since(startTime)
 	cpuUsage := cpuEnd - cpuStart
 
+	log.Printf("Total ukuran memori respons: %d bytes", totalMemorySize)
+
 	// Log atau lakukan sesuatu dengan informasi penggunaan CPU
 	log.Printf("Durasi eksekusi: %v, Penggunaan CPU: %f\n", duration, cpuUsage)
+
 	return &crud.CreateBulkRefResponse{
 		Success: true,
 		Message: "Bulk create successful",
